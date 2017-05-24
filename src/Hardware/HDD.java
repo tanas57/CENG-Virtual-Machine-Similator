@@ -9,25 +9,29 @@ import java.io.PrintWriter;
 */
 public class HDD{
 
-	private Block [] blocks;
-	private int blockNum;
-	private int blockSize;
-	private int currentBlock;
-	
+	private Block [] blocks; // data
+	private int blockNum;	 // number of blocks
+	private int blockSize;	 // blocks data size
+	private int currentBlock;// which block is available to write data
+	private String storeData;
+	// A HDD contains blocks, and sectors
 	public HDD(int blockNum, int blockSize)
 	{
 		this.blockNum = blockNum;
 		this.blockSize = blockSize;
 		blocks = new Block[blockNum];
 		currentBlock = 0;
+		this.storeData = "vdisk.txt";
 		makeEmptyBlocks();
 	}
-	
+	// get number of blocks
 	public int getBlocks() { return this.blockNum; }
-	
+	// get number of block size
 	public int getBlockSize() { return this.blockSize; }
-	
-	public void printdisk()
+	// get vdisk data
+	public Block[] Blocks() { return this.blocks; }
+	// print all data
+	public void printDisk()
 	{
 		for (int i = 1; i <= this.blockNum; i++) {
 			
@@ -42,27 +46,37 @@ public class HDD{
 			System.out.print("\t");
 		}
 	}
-	
+	// create a new file in vdisk
 	public int create(String filename)
 	{
 		char[] file = filename.toCharArray();
 		int currentblock = 0;
-		blocks[currentBlock].write('@');
-		if(currentBlock < blockNum)
-		{
-			for (int i = 0; i < file.length; i++) {
-				blocks[currentBlock].write(file[i]);
+		boolean control = false;
+		for (int i = 0; i < blocks.length; i++) {
+			if(blocks[i].DataToString().contains("@"+filename))
+			{
+				control = true;
+				break;
 			}
-			
-			blocks[currentBlock].setNext((byte)0);
-			currentblock = currentBlock;
-			updateAvailableBlock();
-			return currentblock;
 		}
-		
+		if(!control && !filename.equals(null))
+		{
+			blocks[currentBlock].write('@');
+			if(currentBlock < blockNum)
+			{
+				for (int i = 0; i < file.length; i++) {
+					blocks[currentBlock].write(file[i]);
+				}
+				
+				blocks[currentBlock].setNext((byte)0);
+				currentblock = currentBlock;
+				updateAvailableBlock();
+				return currentblock;
+			}
+		}
 		return -1;
 	}
-	
+	// write data to related file
 	public boolean append(String filename, String content)
 	{
 		char [] data = content.toCharArray();
@@ -75,7 +89,7 @@ public class HDD{
 				control = true;
 				if(blocks[i].getNext() == 0) blocks[i].setNext((byte) (currentBlock + 1));
 				else{
-					// nextlerinin sıfır olanına gidip sıfırı current yapıcaz
+					// nextlerinin s�f�r olan�na gidip s�f�r� current yap�caz
 					int index = blocks[i].getNext() - 1;
 					while(true)
 					{
@@ -99,13 +113,13 @@ public class HDD{
 				blocks[currentBlock].write(data[i]);
 			}
 			
-			updateAvailableBlock(); // boş blok a geç
+			updateAvailableBlock(); // bo� blok a ge�
 
 			return true;
 		}
 		else return false;
 	}
-	
+	// insert data to related file's block
 	public boolean insert(String filename, int block, String content)
 	{
 		
@@ -148,7 +162,7 @@ public class HDD{
 				}
 			}
 			
-			// yeni veri eklendi verinin en sonunu seçilen bloktan sonrasına bağlıyıcaz
+			// yeni veri eklendi verinin en sonunu se�ilen bloktan sonras�na ba�l�y�caz
 			updateAvailableBlock();
 			byte nextblock =(byte)(currentBlock + 1);
 			
@@ -163,7 +177,7 @@ public class HDD{
 		
 		return false;
 	}
-	
+	// delete a file from vdisk
 	public boolean delete(String filename)
 	{
 		boolean control = false;
@@ -196,7 +210,7 @@ public class HDD{
 		updateAvailableBlock();
 		return true;
 	}
-	
+	// delete file's data between start and end blocks
 	public boolean delete(String filename, int startBlock, int endBlock)
 	{
 		boolean control = false;
@@ -260,7 +274,7 @@ public class HDD{
 
 		return false;
 	}
-	
+	// combine file and file's data
 	public boolean defrag()
 	{
 		Block[] tempVdisk = new Block[this.blockNum];
@@ -284,23 +298,21 @@ public class HDD{
 				while(next > -1)
 				{
 					for (int j = 0; j < tempVdisk[next].getData().length; j++) {
-						if(tempVdisk[next].getData()[j] != '.') content += tempVdisk[next].getData()[j];
+								content += tempVdisk[next].getData()[j];
 					}
 					next = tempVdisk[next].getNext() - 1;
 				}
-				
 				this.append(filename, content);
-				
 			}
 		}
 		
 		return true;
 	}
-	
+	// save as a file to primary disk
 	public boolean store()
 	{
 		try{
-		    PrintWriter writer = new PrintWriter("data.txt", "UTF-8");
+		    PrintWriter writer = new PrintWriter(storeData, "UTF-8");
 		    for (int i = 0; i < blocks.length; i++) {
 		    	String data = "";
 				for (int j = 0; j < blocks[i].getData().length; j++) {
@@ -317,15 +329,17 @@ public class HDD{
 		
 		return true;
 	}
-	
+	// get data from disk to vdisk
 	public boolean restore() throws IOException
 	{
-		String fileName = "data.txt";
+		String fileName = storeData;
 	    // This will reference one line at a time
 	    String line = null;
+	    makeEmptyBlocks(); // clear data
 	    try 
 	    {
 	           FileReader fileReader = new FileReader(fileName);
+
 	           BufferedReader bufferedReader =  new BufferedReader(fileReader);
 	           int i = 0;
 	           makeEmptyBlocks();
@@ -338,19 +352,14 @@ public class HDD{
 	        		   if(j >9) next += data[j];
 	        	   }
 	        	   blocks[i].setNext((byte)Integer.parseInt(next));
-	        	   
 	        	   i++;
 	           }
-	           
-	           bufferedReader.close();     
-	       }
-	       catch(FileNotFoundException ex) {
-	    	                
-	       }
+	           bufferedReader.close();
+	      }
+	      catch(FileNotFoundException ex) { }
 		return true;
 	}
-	// bu blok clası sadece hdd için.. 
-	
+	// update currentblock which is writable block.
 	private void updateAvailableBlock()
 	{
 		String emptyData = "";
@@ -364,15 +373,15 @@ public class HDD{
 			}
 		}
 	}
-	
-	private void makeEmptyBlocks()
+	// delete all vdisk data
+	public void makeEmptyBlocks()
 	{
 		for (int i = 0; i < this.blockNum; i++) {
 			blocks[i] = new Block();
 		}
 	}
-	
-	private class Block
+	// this class is just used in vdisk
+	public class Block
 	{
 		private char [] sectors;
 		private byte nextSector; // 
@@ -383,7 +392,7 @@ public class HDD{
 			sectors = new char[blockSize];
 			makeEmpty();
 		}
-		
+		// write data to vdisk block
 		private void write(char letter)
 		{
 			if(nextSector < blockSize)
@@ -392,11 +401,11 @@ public class HDD{
 				nextSector++;
 			}
 		}
-		
+		// get next block number
 		private byte getNext() { return this.nextBlock; }
-		
+		// set next block number
 		private void setNext(byte num) { this.nextBlock = num; }
-		
+		// reset block data
 		private void makeEmpty()
 		{
 			for (int i = 0; i < sectors.length; i++) {
@@ -405,10 +414,10 @@ public class HDD{
 			this.nextBlock = 0;
 			this.nextSector = 0;
 		}
-		
-		private char[] getData() { return sectors; }
-		
-		private String DataToString() {
+		// get related block data
+		public char[] getData() { return sectors; }
+		// get String data which combines char array
+		public String DataToString() {
 			String data = "";
 			for (int i = 0; i < sectors.length; i++) {
 				data += sectors[i];
