@@ -1,7 +1,6 @@
 package Hardware;
 
-import Hardware.HDD.Block;
-import Structures.*;
+import Structures.List;
 
 public class RAM {
 
@@ -14,7 +13,6 @@ public class RAM {
 		memory = new List(hdd.getBlocks(), hdd.getBlockSize()); // 30 blocks, 10 sectors a block contains 10 sectors
 	}
 	// clear RAM
-	
 	private void clearRAM()
 	{
 		memory = new List(vhdd.getBlocks(), vhdd.getBlockSize());
@@ -59,6 +57,11 @@ public class RAM {
 	{
 		memory.deleteSector(filename, first, second);
 	}
+	// update a data in RAM
+	public void update(String filename,int place,String content)
+	{
+			memory.update(filename, place, content);
+	}
 	// insert a data in RAM
 	public void insert(String filename,int place,String content)
 	{
@@ -72,14 +75,14 @@ public class RAM {
 	
 	public void restore()
 	{
-		
 		// first clear ram
 		clearRAM();
 		// get hdd to temproray
-		Block[] tempDisk = new Block[vhdd.getBlocks()];
-		
+		HDD.Block[] tempDisk = new HDD.Block[vhdd.getBlocks()];
+		vhdd.makeEmptyBlocks(tempDisk);
 		for (int i = 0; i < tempDisk.length; i++) {
-			tempDisk[i] = vhdd.Blocks()[i];
+			tempDisk[i].setData(vhdd.Blocks()[i].DataToString());
+			tempDisk[i].setNext(vhdd.Blocks()[i].getNext());
 		}
 		// hdd defrag
 		vhdd.defrag();
@@ -107,7 +110,7 @@ public class RAM {
 			}
 		}
 		// hdd clear
-		vhdd.makeEmptyBlocks();
+		vhdd.makeEmptyBlocks(vhdd.Blocks());
 		// transfer temproray hdd to real HDD
 		for (int i = 0; i < vhdd.getBlocks(); i++) {
 			vhdd.Blocks()[i] = tempDisk[i];

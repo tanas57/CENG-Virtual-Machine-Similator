@@ -24,7 +24,7 @@ public class CPU  {
 	public CPU() throws Exception
 	{
 		alphabet = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
-		commands = new String[] { "Load","Print","Printram (Name)","Printram (Number)","Create","Append","Insert","Delete","Printdisk","Defrag","Store","Restore","Exit" };
+		commands = new String[] { "Load","Print","Printram (Name)","Printram (Number)","Create","Update","Append","Insert","Delete","Printdisk","Defrag","Store","Restore","Exit" };
 		console  = Enigma.getConsole("CENG Virtual Machine", 90, 22, 14, 4);
 		// ------ Standard code for mouse and keyboard ------ Do not change
 		scan = new Scanner(System.in);
@@ -44,16 +44,21 @@ public class CPU  {
 	      console.getTextWindow().addKeyListener(klis);
 	    // ----------------------------------------------------
 	    instruction();
+	    // you can chance disk size block, blocksize(30,10)
 		HDD hdd = new HDD(30, 10);
 		RAM ram = new RAM(hdd);
-
 		System.out.println("Presy any key to continue");
-		int prev  = 3;
-		int next  = 3;
-		int i;
+		
 		TextAttributes reverse = new TextAttributes(Color.blue,Color.white);
         TextAttributes attrs = new TextAttributes(Color.white,Color.black);
         String selectedCommand = null;
+        
+        int prev  = 3;
+		int next  = 3;
+		int i = 0 , index = 0;
+		String filename = "";
+		String content = "";
+        
         while(true)
         {
         	klis=new KeyListener() 
@@ -91,7 +96,7 @@ public class CPU  {
 			}
 			if(keypr==1)  // if keyboard button pressed
 	         {  
-				
+				console.setTextAttributes(attrs);
 		        if(rkey==KeyEvent.VK_UP)
 		        {
 		        	prev = next;
@@ -132,7 +137,7 @@ public class CPU  {
             		case "Print":
             		{
             			console.getOutputStream().print("Enter Filename = ");
-            			String filename = scan.nextLine();
+            			filename = scan.nextLine();
             			ram.print(filename);
             		}break;
             		case "Printram (Name)":
@@ -152,14 +157,14 @@ public class CPU  {
             		case "Create":
             		{
             			console.getOutputStream().print("Filename = ");
-            			String filename = scan.nextLine();
+            			filename = scan.nextLine();
             			if(!checkTheEntered(filename))
             			{
             				System.out.println("Wrong Character");
             			}
             			else
             			{
-	            			int index = hdd.create(filename);
+	            			index = hdd.create(filename);
 	            			if(index != -1) ram.create(filename,++index);
 	            			else
 	            			{
@@ -172,9 +177,9 @@ public class CPU  {
             		case "Append":
             		{
             			console.getOutputStream().print("Filename = ");
-            			String filename = scan.nextLine();
+            			filename = scan.nextLine();
             			console.getOutputStream().print("Content = ");
-            			String content = scan.nextLine();
+            			content = scan.nextLine();
             			if(!checkTheEntered(filename) || !(checkTheEntered(content)))
             			{
             				System.out.println("Wrong Character");
@@ -192,7 +197,7 @@ public class CPU  {
             			if(select.equals("C") || select.equals("c"))
             			{
 	            			console.getOutputStream().print("Enter filename = ");
-	            			String filename = scan.nextLine();
+	            			filename = scan.nextLine();
 	            			console.getOutputStream().print("Enter first int = ");
 	            			byte startBlock = 0;
 	            			try
@@ -218,14 +223,14 @@ public class CPU  {
             			if(select.equals("F") || select.equals("f"))
             			{
             				console.getOutputStream().print("Enter filename = ");
-	            			String filename = scan.nextLine();
+	            			filename = scan.nextLine();
 	            			if(hdd.delete(filename))ram.delete(filename);
             			}
             		}break;
             		case "Insert":
             		{
             			console.getOutputStream().print("Enter filename = ");
-            			String filename = scan.nextLine();
+            			filename = scan.nextLine();
             			console.getOutputStream().print("Enter inserting order =");
             			byte block = 0;
             			try
@@ -237,9 +242,31 @@ public class CPU  {
 						}
             			scan.nextLine();
             			console.getOutputStream().print("Enter the content =");
-            			String content = scan.nextLine();
+            			content = scan.nextLine();
             			if(hdd.insert(filename, block, content)) ram.insert(filename, block, content);
             			else System.out.println("An error is occured, please try again");
+            		}break;
+            		case "Update":
+            		{
+            			console.getOutputStream().print("Enter filename = ");
+            			filename = scan.nextLine();
+            			console.getOutputStream().print("Enter updating order =");
+            			byte block = 0;
+            			try
+            			{
+            				block = scan.nextByte();
+            			}
+            			catch (Exception e) {
+            				System.out.println("Wrong input");
+						}
+            			scan.nextLine();
+            			console.getOutputStream().print("Enter the content =");
+            			content = scan.nextLine();
+            			if(hdd.update(filename, block, content))ram.update(filename, block, content);
+            			else
+            			{
+            				System.out.println("Wrong input");
+            			}
             		}break;
             		case "Defrag":
             		{
@@ -262,7 +289,7 @@ public class CPU  {
             		}break;
             		case "Load":
             		{
-            			hdd.makeEmptyBlocks();
+            			hdd.makeEmptyBlocks(hdd.Blocks());
             			ram.makeEmptyList();
             			console.getOutputStream().print("file.txt = ");
             			String loadfile = scan.nextLine();
@@ -327,7 +354,7 @@ public class CPU  {
 			            					}break;
 			            					case "Create":
 			            					{
-			            						int index = hdd.create(parseCommand[1]);
+			            						index = hdd.create(parseCommand[1]);
 			            						if(index != -1) ram.create(parseCommand[1],++index);
 			            						System.out.println("create : OK" + " - " + parseCommand[1]);
 			            					}break;

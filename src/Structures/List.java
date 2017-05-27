@@ -71,6 +71,20 @@ public class List { // multi-list structure
 		second.setFileName(tempFile);
 		second.setNumber(tempIndex);
 	}
+	// update content in the block 
+	public void update(String filename,int place,String content)
+	{
+			Block current = root;
+			while(current != null)
+			{
+				if(current.getFileName().equals("@" + filename))
+				{
+					current.updateSector(place, content);
+					break;
+				}
+				current = current.getNextFilename();
+			}
+	}
 	// delete it according to filename
 	public void deleteBlock(String filename)
 	{

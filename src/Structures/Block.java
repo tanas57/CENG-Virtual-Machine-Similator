@@ -32,7 +32,21 @@ public class Block {
 	public Sector getRight() { return this.root; }
 	public void setRight(Sector root) { this.root = root;}
 	// getter and setter methods..End
-	
+	public void updateSector(int place,String content)
+	{
+		if(root.getData() == content){
+			root.setData(content);
+		}
+		else
+		{
+			Sector temp = root;
+			for (int i = 1; i < place; i++) 
+			{
+				temp = temp.getNext();
+			}
+			temp.setData(content);
+		}
+	}
 	// insert new sector , after place sector
 	public void insertSectorToBlock(int place,Sector newsector)
 	{

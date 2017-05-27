@@ -19,10 +19,10 @@ public class HDD{
 	{
 		this.blockNum = blockNum;
 		this.blockSize = blockSize;
-		blocks = new Block[blockNum];
-		currentBlock = 0;
+		this.blocks = new Block[blockNum];
+		this.currentBlock = 0;
 		this.storeData = "vdisk.txt";
-		makeEmptyBlocks();
+		makeEmptyBlocks(blocks);
 	}
 	// get number of blocks
 	public int getBlocks() { return this.blockNum; }
@@ -37,12 +37,10 @@ public class HDD{
 			
 			System.out.print((i < 10) ? "0" + i : i);
 			
-			for (int j = 0; j < blockSize; j++) {
-				System.out.print(blocks[i - 1].getData()[j]);
-			}
+			System.out.print(blocks[i - 1].DataToString());
 			
 			int nextBlock = blocks[i - 1].getNext();
-			System.out.print((nextBlock < 10) ? " " + nextBlock : nextBlock);
+			System.out.print((nextBlock < blockSize) ? " " + nextBlock : nextBlock);
 			System.out.print("\t");
 		}
 	}
@@ -61,13 +59,13 @@ public class HDD{
 		}
 		if(!control && !filename.equals(null))
 		{
-			blocks[currentBlock].write('@');
+			updateAvailableBlock();
 			if(currentBlock < blockNum)
 			{
+				blocks[currentBlock].write('@');
 				for (int i = 0; i < file.length; i++) {
 					blocks[currentBlock].write(file[i]);
 				}
-				
 				blocks[currentBlock].setNext((byte)0);
 				currentblock = currentBlock;
 				updateAvailableBlock();
@@ -177,33 +175,68 @@ public class HDD{
 		
 		return false;
 	}
+	// update data
+	public boolean update(String filename, int block, String content)
+	{
+			boolean control = false;
+			String next = ""; int tempStart = 0;
+			for (int i = 0; i < blocks.length; i++) 
+			{
+				if(blocks[i].DataToString().contains("@"+filename))
+				{
+					control = true;
+					tempStart = blocks[i].getNext();
+					if(tempStart == 0) return false;
+					int temp2 = tempStart, count = 0;
+					while(true)
+					{
+						tempStart--;
+						next += tempStart + " ";
+						tempStart = blocks[tempStart].getNext();
+						if(tempStart == 0) break; 
+						count++;
+					}
+					tempStart = temp2; // reset temp start index
+					if(count + 1 < block) return false;
+					break;
+				}
+			}
+			String[] nexts = next.split(" ");
+			if(control) 
+			{
+				blocks[Integer.parseInt(nexts[block-1])].setData(content);
+				return true;
+			}
+			return false;
+	}
 	// delete a file from vdisk
 	public boolean delete(String filename)
 	{
 		boolean control = false;
 		
-		int startIndex = 0, firstIndex = 0;
+		int startIndex = -1, firstIndex = -1;
 		for (int i = 0; i < blocks.length; i++) {
 			if(blocks[i].DataToString().contains("@"+filename))
 			{
 				control = true;
 				startIndex = blocks[i].getNext();
 				firstIndex = i;
+				
+				System.out.println("bulundu index : " + i);
 				break;
 			}
 		}
 		
 		if(control){
+			System.out.println(firstIndex + " başı silindi");
 			blocks[firstIndex].makeEmpty(); // delete @filename
-			int temp = 0;
+			int tempStart = startIndex;
+			if(tempStart == 0 ) return false;
 			while(true) // delete @filename data
 			{
-				if(startIndex != 0) startIndex--;
-				temp = blocks[startIndex].getNext();
-				blocks[startIndex].makeEmpty();
-				
-				if(temp == 0) break;
-				startIndex = temp;
+				tempStart--;
+				tempStart = blocks[tempStart].getNext();
+				if(tempStart == 0) break;
 			}
 		}
 		else return false;
@@ -282,7 +315,7 @@ public class HDD{
 			tempVdisk[i] = blocks[i];
 		}
 		
-		makeEmptyBlocks();
+		makeEmptyBlocks(blocks);
 		updateAvailableBlock();
 		for (int i = 0; i < tempVdisk.length; i++) {
 
@@ -335,26 +368,28 @@ public class HDD{
 		String fileName = storeData;
 	    // This will reference one line at a time
 	    String line = null;
-	    makeEmptyBlocks(); // clear data
 	    try 
 	    {
 	           FileReader fileReader = new FileReader(fileName);
 
 	           BufferedReader bufferedReader =  new BufferedReader(fileReader);
 	           int i = 0;
-	           makeEmptyBlocks();
+	           for (int j = 0; j < blocks.length; j++) {
+	        	   blocks[j].makeEmpty();
+	           }
 	           while((line = bufferedReader.readLine()) != null) 
 	           {
 	        	   char[] data = line.toCharArray();
 	        	   String next = "";
 	        	   for (int j = 0; j < data.length; j++) {
-	        		   if(j <= 9) blocks[i].write(data[j]);
-	        		   if(j >9) next += data[j];
+	        		   if(j < blockSize) blocks[i].write(data[j]);
+	        		   if(j >= blockSize) next += data[j];
 	        	   }
 	        	   blocks[i].setNext((byte)Integer.parseInt(next));
 	        	   i++;
 	           }
 	           bufferedReader.close();
+	           updateAvailableBlock();
 	      }
 	      catch(FileNotFoundException ex) { }
 		return true;
@@ -374,10 +409,10 @@ public class HDD{
 		}
 	}
 	// delete all vdisk data
-	public void makeEmptyBlocks()
+	public void makeEmptyBlocks(Block[] block)
 	{
-		for (int i = 0; i < this.blockNum; i++) {
-			blocks[i] = new Block();
+		for (int i = 0; i < block.length; i++) {
+			block[i] = new Block();
 		}
 	}
 	// this class is just used in vdisk
@@ -386,7 +421,7 @@ public class HDD{
 		private char [] sectors;
 		private byte nextSector; // 
 		private byte nextBlock;
-		private Block()
+		public Block()
 		{
 			this.nextSector = 0;
 			sectors = new char[blockSize];
@@ -402,9 +437,9 @@ public class HDD{
 			}
 		}
 		// get next block number
-		private byte getNext() { return this.nextBlock; }
+		public byte getNext() { return this.nextBlock; }
 		// set next block number
-		private void setNext(byte num) { this.nextBlock = num; }
+		public void setNext(byte num) { this.nextBlock = num; }
 		// reset block data
 		private void makeEmpty()
 		{
@@ -416,6 +451,28 @@ public class HDD{
 		}
 		// get related block data
 		public char[] getData() { return sectors; }
+		public void setData(String data)
+		{
+			char[] newdata = data.toCharArray();
+			if( sectors.length < newdata.length ) 
+			{
+				System.out.print("long content");
+			}
+			else
+			{
+				for (int i = 0; i < sectors.length; i++) 
+				{
+					if(i < newdata.length)
+					{
+						this.sectors[i] = newdata[i];
+					}
+					else
+					{
+						this.sectors[i] = '.';
+					}
+				}
+			}
+		}
 		// get String data which combines char array
 		public String DataToString() {
 			String data = "";
